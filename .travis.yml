@@ -14,8 +14,11 @@ after_success:
   - docker build -t sportiz91/multi-nginx ./nginx
   - docker build -t sportiz91/multi-server ./server
   - docker build -t sportiz91/multi-worker ./worker
-
-
+  - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_ID" --password-stdin
+  - docker push sportiz91/multi-client
+  - docker push sportiz91/multi-nginx
+  - docker push sportiz91/multi-server
+  - docker push sportiz91/multi-worker
 
 #139. Travis Configuration Setup
 #La configuración de .travis.yml será muy parecida a la que hicimos anteriormente.
@@ -29,3 +32,20 @@ after_success:
 
 #141. Github and Travis CI Setup
 
+#142. Pushing Images to Docker Hub
+#En primer lugar, destacar que tengo que hacer un docker login, de modo tal de poderme loguear a mi docker hub account.
+#Entonces, siempre que pushee imágenes a mi Hub, lo haré desde mi cuenta. 
+#Entonces, tendré que runnear el docker login command desde el .travis.yml también!
+#No obstante, no vamos a poner nuestro usuario y contraseña del Docker Hub en plain text dentro del archivo de configuración,
+#Puesto que cualquiera podría ver mi data.
+#Entonces, vamos a setupear encrypted environment variables. Estas solo será accesibles para Travis CI. 
+#Para hacer esto -> voy a travis ci dashboard -> repo -> more options -> settings -> environment variables 
+#Dentro de las environment variables, vamos a ingresar nuestro Docker ID y Docker Password (del Hub).
+#Una vez que tenemos las environment variables agregadas al dashboard de travis_ci, vamos a agregar una línea adicional al after_success
+#Vamos a loguearnos al docker hub, y luego vamos a pushear todas las imágenes.
+#Básicamente, no queremos ir al multi step wizard que nos presenta el docker login. Por eso, hacemos todo el login en un único comando.
+#echo "$DOCKER_PASSWORD", básicamente obtiene nuestra docker password de la environment variable y luego emite la misma como
+#Stdin, as input del próximo comando. Luego entonces agrego el docker login command y agrego mi username con la -u flag. 
+#Y luego le digo al docker login que podría esperar recibir dicha password desde std in. 
+#Esencialmente este comando me permite loguearme a Docker con un único comando.
+#Ahora que ya estoy logueado, puedo pushear todas las production images al docker hub. 
