@@ -1,0 +1,31 @@
+sudo: required
+
+services:
+  - docker
+
+before_install:
+  - docker build -t sportiz91/react-test -f ./client/Dockerfile.dev ./client
+
+script:
+  - docker run -e CI=true sportiz91/react-test npm test
+
+after_success:
+  - docker build -t sportiz91/multi-client ./client
+  - docker build -t sportiz91/multi-nginx ./nginx
+  - docker build -t sportiz91/multi-server ./server
+  - docker build -t sportiz91/multi-worker ./worker
+
+
+
+#139. Travis Configuration Setup
+#La configuración de .travis.yml será muy parecida a la que hicimos anteriormente.
+#En el before_install script vamos a estar escribiendo una build version de nuestro Client project y luego vamos a correr algunos tests
+#Adentro de él. 
+#Recordemos que la script section es la main section. Si alguno de los scripts que hemos definido adentro exitea con un status code
+#De diferente de 0, Travis CI va a asumir que nuestro build falló. 
+#Recordemos que el -- separa el startup command (cmd) de los argumentos del startup command. Y luego viene la flag de --coverage.
+#Luego de que haya pasado los tests, es decir, en el after_success, vamos a comenzar a buildear las production versions de nuestras
+#Imágenes. Y luego, las vamos a pushear al Docker Hub. 
+
+#141. Github and Travis CI Setup
+

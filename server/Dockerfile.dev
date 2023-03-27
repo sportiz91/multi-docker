@@ -1,0 +1,18 @@
+FROM node:14.4.0-alpine
+
+WORKDIR "/app"
+
+COPY ./package.json ./
+RUN npm install
+
+COPY . .
+
+CMD ["npm", "run", "dev"]
+
+
+#118. Dockerizing Generic Node Apps
+#Recordemos que Nodemon me permite reestartear el server cada vez que hago un cambio
+#Vamos a usar esto. 
+#Cada vez que setupeamos un volumen y nuestro src changes y el volumen se actualiza también, queremos que nuestra App
+#Automáticamente se restartee con nodemon. 
+#Voy por 1 minuto 20 del video

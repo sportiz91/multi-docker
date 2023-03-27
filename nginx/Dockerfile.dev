@@ -1,0 +1,16 @@
+FROM nginx
+
+COPY ./default.conf /etc/nginx/conf.d/default.conf
+
+#127. Building a custom nginx image:
+#Para hacer cualquier customización de nginx, esencialmente tengo que construir un dockerfile que diga "queremos hacer una imagen
+#de nginx" y luego vamos a tomar nuestro configuration file y copiarlo en un temporary container o image. Toda la configuración
+#De nginx se hace por este configuration file que simplemente existe en el file system del container. 
+#Entonces, siempre que peguemos el configuration file en nuestra imagen, automáticamente aplicará a nginx una vez que el container
+#startupee nuestra custom image. 
+#Recordemos que siempre que no reemplacemos el default command de una imagen, adentro del dockerfile, entonces el default command
+#De de la imagen padre (que es FROM nginx) automáticamente tomará precedencia.
+#En casos anteriores, no hemos hecho uso de este COPY command. Básicamente veníamos copiando files a un directorio. Pero, en la COPY
+#instruction, también se puede especificar el file name para copiar el file. Si el file ya existe, lo reemplaza. 
+#En la nginx image, hay un default.conf file que viene por default. Entonces, lo estamos sobreescribiendo.
+#Lo único que deberíamos hacer sería agregar nginx a nuestro docker compose file.

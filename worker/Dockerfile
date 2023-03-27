@@ -1,0 +1,14 @@
+FROM node:14.4.0-alpine
+
+WORKDIR "/app"
+
+COPY ./package.json ./
+RUN npm install
+
+COPY . .
+
+CMD ["npm", "run", "start"]
+
+
+#134. Production Dockerfiles
+#Lo único que cambia respecto del Dockerfile.dev es que tendremos un startup command different -> npm run start, en vez de npm run dev.
