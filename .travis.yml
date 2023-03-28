@@ -4,21 +4,21 @@ services:
   - docker
 
 before_install:
-  - docker build -t sportiz91/react-test -f ./client/Dockerfile.dev ./client
+  - docker build -t lasantoneta/react-test -f ./client/Dockerfile.dev ./client
 
 script:
-  - docker run -e CI=true sportiz91/react-test npm test
+  - docker run -e CI=true lasantoneta/react-test npm test
 
 after_success:
-  - docker build -t sportiz91/multi-client ./client
-  - docker build -t sportiz91/multi-nginx ./nginx
-  - docker build -t sportiz91/multi-server ./server
-  - docker build -t sportiz91/multi-worker ./worker
+  - docker build -t lasantoneta/multi-client ./client
+  - docker build -t lasantoneta/multi-nginx ./nginx
+  - docker build -t lasantoneta/multi-server ./server
+  - docker build -t lasantoneta/multi-worker ./worker
   - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_ID" --password-stdin
-  - docker push sportiz91/multi-client
-  - docker push sportiz91/multi-nginx
-  - docker push sportiz91/multi-server
-  - docker push sportiz91/multi-worker
+  - docker push lasantoneta/multi-client
+  - docker push lasantoneta/multi-nginx
+  - docker push lasantoneta/multi-server
+  - docker push lasantoneta/multi-worker
 
 #139. Travis Configuration Setup
 #La configuración de .travis.yml será muy parecida a la que hicimos anteriormente.
