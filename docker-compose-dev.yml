@@ -1,0 +1,219 @@
+version: '3'
+
+services:  
+  postgres:
+    image: "postgres:latest"
+    environment:
+      - POSTGRES_PASSWORD=postgres_password
+    ports:
+      - '5400:5432'
+  redis:
+    image: 'redis:latest'
+    ports:
+      - '6379:6379'
+    expose:
+      - '6379'
+  nginx:
+    restart: always
+    depends_on:
+      - api
+      - client
+    build: 
+      dockerfile: Dockerfile.dev
+      context: ./nginx
+    ports:
+      - '3050:80'
+  api:
+    build: 
+      dockerfile: Dockerfile.dev
+      context: ./server
+    volumes:
+      - /app/node_modules
+      - ./server:/app
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - PGUSER=postgres
+      - PGHOST=postgres
+      - PGDATABASE=postgres
+      - PGPASSWORD=postgres_password
+      - PGPORT=5432
+  client:
+    build: 
+      dockerfile: Dockerfile.dev
+      context: ./client
+    volumes:
+      - /home/node/app/node_modules
+      - ./client:/home/node/app
+    environment:
+      - WDS_SOCKET_PORT=0
+  worker:
+    build:
+      dockerfile: Dockerfile.dev
+      context: ./worker
+    volumes:
+      - /app/node_modules
+      - ./worker:/app
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+
+  
+
+#121. Docker-compose config:
+#Notar que, en este proyecto, vamos a estar construyendo el docker-compose.yml desde el root folder.
+#Entonces, tenemos que buscar el dockerfile para el server, en la carpeta ./server.
+#Para los volumes, lo primero que vamos a hacer es poner un pequeño bookmark en la node_modules folder. 
+#Básicamente, estamos diciendo que, adentro del container, no intentemos hacer un override del node_modules.
+#Es decir, dejemos esa carpeta como está.
+#Entonces, cada vez que nuestra App quiera acceder algo adentro de nuestro app directory adentro de nuestro container,
+#Excepto por el node_modules folder, básicamente se redirigirá al ./server directory. 
+
+#122. Environment Variables with Docker Compose
+#Vamos a estar utilizando diferentes sintaxis. 
+#variableName = value. Esta es la sintaxis que vamos a estar usando más frecuentemente. 
+#Esto va a setear una variable adentro del container, at runtime del Container. 
+#Cuando seteamos una environment variable dentro de un docker-compose file, estamos setupeando una variable de entorno que se aplica
+#En runtime. Es decir, solo cuando el container se startupea. 
+#Es decir, cuando especificamos una environment variable dentro del docker-compose file, esa environment variable no se codifica en la
+#Imagen. 
+#Después, lo otro que podemos hacer, es determinar simplemente variableName. Si solamente especificamos la variable name,
+#El valor de esta variable se tomará de nuestra computadora. Es decir, si tenemos alguna environment variable setupeada
+#En nuestra computadora -> API key, ...
+#REDIS_HOST -> es algo así como la URL por la cual vamos a acceder al Redis Server. 
+
+#124. The Worker and Client Services
+#Notemos que, al momento, no hicimos ningún PORT mapping aún.
+#Recordemos que dijimos que vamos a tener un nginx server que se encargará de routear las requests del end user hacia el express server
+#O hacia el development server de React.
+
+#125. Nginx Path Routing
+#Recordemos que no hemos hecho mención alguna a ningún port adentro de este file.
+#El propósito del nginx server anterior era el de hostear todos los React source o production file.
+#Es decir, era un production environment que estabamos setupeando. En este caso, estamos setupeando un Development Environment.
+#La request /index.html y /main.js irán al React Server. Pero las requests /values/all y /values/current irán al Express Server.
+#Pero, al momento, no tenemos ninguna infraestructura que nos permita tomar esas requests y mandarlas al React Server.
+#Ese es el propósito del nginx server. El nginx server mirará a todas las requests y decidirá a qué backend service le tiraremos
+#La request. 
+#Vamos a agregar un container adicional para agregar un servicio al docker-compose file. El servicio adicional prenderá un nginx
+#Server. Y el nginx server tendrá esencialmente una única tarea: cada vez que una request llega a nginx, mirará a la incoming
+#Request y especificamente mirará a la request path. El nginx server dirá: "okay, tiene /api" ? -> si /api está en la route,
+#Eso quiere decir que tendremos que redirigir la request al Express server. Y si la path no tiene /api, redirigiremos al
+#React server. 
+#Nginx lo que hace es cutear la path. Es decir, si antes la request era /api/values/all, luego termina siendo /values/all.
+#También está la opción de no cambiar las routes con nginx, es decir, que siga siendo /api/values/all y que el express server
+#Sea el que cambiar las routes.
+
+#127. Building a custom nginx image:
+#Para nginx, quiero que la restart policy sea always, porque básicamente quiero que siempre esté up and running luego de crashear.
+#
+
+#128. Starting Up Docker Compose
+#La primera vez que hagamos el Docker Compose Up, lo más probable es que alguno de los services que definimos, crashee.
+
+#130. Troubleshooting Startup Bugs
+#Lo que veremos es que, al cargar la app, tendremos algunos errores de que no puede establecer la conexión al WebSocket.
+#Esto hace que las requests se procesen de forma super lenta.
+
+#Q: Can you explain me the depends_on instruction of a docker-compose file in detail?
+#A:
+#The depends_on instruction in a Docker Compose file is used to specify dependencies between services. It 
+#allows you to define the order in which services should be started up and stopped, based on their dependencies.
+#When you specify a dependency between two services using depends_on, Docker Compose will start 
+#the service with the dependency before starting the service that depends on it.
+#This ensures that any services that a given service depends on are available and running before the dependent service starts.
+#Here is an example of how to use depends_on in a Docker Compose file:
+#version: '3'
+
+#services:
+#  web:
+#    build: .
+#    depends_on:
+#      - db
+
+#  db:
+#    image: postgres
+#In this example, there are two services defined: web and db. The web service 
+#depends on the db service, so db will be started before web is started.
+#It's important to note that depends_on only ensures that the dependent service is started before the service that depends on it.
+#It does not guarantee that the dependent service is ready to receive requests before the dependent service starts.
+#To handle this situation, you can use a tool like wait-for-it or dockerize to delay the startup of the dependent service until 
+#the dependent service is ready to receive requests.
+#Additionally, it's worth noting that depends_on does not control the order in which services are stopped.
+#When stopping services, Docker Compose stops them in reverse order of the order in which they were started.
+# If you need more control over the order in which services are stopped, you can use the stop-grace-period option 
+#to set a delay between stopping services.
+#
+
+#132. Opening Websocket Connections
+#El problema aquí es que nuestro Browser, y la React App running adentro de él, quiere obtener una active connection al React
+#Development Server. 
+
+#Q: VScode Extensions for PostgreSQL db:
+#A:
+#Yes, there are several VSCode extensions that you can use to visualize and manage PostgreSQL databases from within the VSCode editor.
+#One such extension is the "PostgreSQL" extension by Microsoft, which provides a rich set of features 
+#for interacting with PostgreSQL databases from within VSCode.
+#With this extension, you can connect to a PostgreSQL database, browse the database schema, run SQL queries, 
+#manage database objects, and more.
+#To install the "PostgreSQL" extension in VSCode, follow these steps:
+#Open VSCode and go to the Extensions panel (Ctrl + Shift + X).
+#Search for "PostgreSQL" in the search bar.
+#Click on the "Install" button to install the extension.
+#Once the extension is installed, you can use it to connect to your PostgreSQL 
+#database by opening the Command Palette (Ctrl + Shift + P) and typing "PostgreSQL: Connect".
+#Follow the prompts to enter your database connection details and authenticate with the database server.
+#Once you are connected, you can use the extension to browse the database schema, run queries, and manage database objects.
+#Note that in order to modify the data inside the container, you will need to have appropriate permissions on the PostgreSQL database.
+#You may need to configure the PostgreSQL database to allow connections from outside the container
+#and you will need to provide appropriate authentication credentials to the VSCode extension to access the database.
+#Additionally, modifying the data inside the container may not be a good practice, as it may affect the consistency 
+#and integrity of the data.
+#It is recommended to use proper database management tools and processes to manage and modify the data in the PostgreSQL database.
+
+#Q: I found a library which is /etc/postgresql/12/main and several files in there. How can 
+#I run the sudo tar -xzf <path/to/downloaded/package> -C /opt/ then? What are those files inside the 12 folder?
+#A: 
+#The /etc/postgresql/12/main directory is the location where the configuration files and data for 
+#the PostgreSQL 12 instance installed on your Ubuntu system are stored.
+#This directory contains several files and subdirectories that are used by PostgreSQL to manage its configuration and data.
+#Regarding your question about running the sudo tar -xzf 
+#<path/to/downloaded/package> -C /opt/ command, this command is used to extract the downloaded PostgreSQL Tools package 
+#to the /opt/ directory
+#which is a common location for installing third-party software on Linux systems. To run this command, you need to replace 
+#<path/to/downloaded/package> with the actual path to the downloaded PostgreSQL Tools package.
+#For example, if you downloaded the package to your Windows "Downloads" directory and the file name is 
+#postgresql-tools-linux-x64.tar.gz
+#you can run the following command in the terminal to extract it to /opt/:
+#sudo tar -xzf /mnt/c/Users/<your-windows-username>/Downloads/postgresql-tools-linux-x64.tar.gz -C /opt/
+#Once you have extracted the package to /opt/, you should have a new directory called pgadmin4 in the /opt/ directory.
+#You can run pgadmin4 by navigating to the /opt/pgadmin4/bin directory and running the pgadmin4 command.
+#Note that you may need to configure your firewall settings to allow incoming connections to 
+#the PostgreSQL server running on your WSL Ubuntu instance, in order to use pgadmin4 to manage the PostgreSQL database.
+
+#Q: How can I install then the "PostgreSQL Tools" in an Ubuntu distribution running on WSL with the command line?
+#A: You can install the PostgreSQL Tools in Ubuntu on WSL using the command line by following these steps:
+#Open a terminal in Ubuntu on WSL.
+#Update the package list by running the command:
+#sudo apt-get update
+#Install the required packages for the PostgreSQL Tools by running the command:
+#sudo apt-get install pgadmin4
+#This will install the pgadmin4 package and all its dependencies.
+#Once the installation is complete, you can launch pgAdmin 4 by running the command:
+#pgadmin4
+#This will launch the pgAdmin 4 web interface in your default web browser. From there, you can connect to your PostgreSQL 
+#server and manage your databases.
+#Note that you may need to configure your firewall settings to allow incoming connections to the PostgreSQL 
+#server running on your WSL Ubuntu instance, 
+#in order to use pgAdmin 4 to manage the PostgreSQL database.
+
+
+
+
+
+
+
+
+
+  
+

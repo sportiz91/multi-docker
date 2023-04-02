@@ -20,6 +20,18 @@ after_success:
   - docker push lasantoneta/multi-server
   - docker push lasantoneta/multi-worker
 
+deploy:
+  provider: elasticbeanstalk
+  region: 'us-east-1'
+  app: 'multi-container'
+  env: 'Multicontainer-env'
+  bucket_name: 'elasticbeanstalk-us-east-1-395525601196'
+  bucket_path: 'container-multi'
+  on:
+    branch: master
+  access_key_id: $AWS_ACCESS_KEY
+  secret_access_key: $AWS_SECRET_KEY
+
 #139. Travis Configuration Setup
 #La configuración de .travis.yml será muy parecida a la que hicimos anteriormente.
 #En el before_install script vamos a estar escribiendo una build version de nuestro Client project y luego vamos a correr algunos tests
